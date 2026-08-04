@@ -1,0 +1,5 @@
+node_modules/
+*.streamDeckPlugin
+com.chen.stock-price.sdPlugin/bin/
+.DS_Store
+*.log

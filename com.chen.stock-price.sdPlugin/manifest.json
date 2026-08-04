@@ -1,0 +1,49 @@
+{
+  "$schema": "https://schemas.elgato.com/streamdeck/plugins/manifest.json",
+  "Name": "Stock Price",
+  "Version": "1.4.0.0",
+  "Author": "Chen",
+  "Actions": [
+    {
+      "Name": "Stock Quote",
+      "UUID": "com.chen.stock-price.quote",
+      "Icon": "imgs/actions/quote/icon",
+      "Tooltip": "Shows an Alpha Vantage stock quote. Press to refresh.",
+      "PropertyInspectorPath": "ui/stock-quote.html",
+      "Controllers": [
+        "Keypad"
+      ],
+      "States": [
+        {
+          "Image": "imgs/actions/quote/key",
+          "ShowTitle": false,
+          "TitleAlignment": "middle",
+          "FontSize": 9
+        }
+      ]
+    }
+  ],
+  "Category": "Stock Price",
+  "CategoryIcon": "imgs/plugin/category-icon",
+  "CodePath": "bin/plugin.js",
+  "Description": "Display Alpha Vantage stock prices on Stream Deck keys.",
+  "Icon": "imgs/plugin/marketplace",
+  "SDKVersion": 3,
+  "Software": {
+    "MinimumVersion": "7.1"
+  },
+  "OS": [
+    {
+      "Platform": "mac",
+      "MinimumVersion": "12"
+    },
+    {
+      "Platform": "windows",
+      "MinimumVersion": "10"
+    }
+  ],
+  "Nodejs": {
+    "Version": "24"
+  },
+  "UUID": "com.chen.stock-price"
+}

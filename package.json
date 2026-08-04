@@ -1,0 +1,23 @@
+{
+  "name": "stock-price-streamdeck",
+  "version": "1.4.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "rollup -c",
+    "validate": "streamdeck validate com.chen.stock-price.sdPlugin",
+    "pack": "streamdeck pack com.chen.stock-price.sdPlugin"
+  },
+  "dependencies": {
+    "@elgato/streamdeck": "latest"
+  },
+  "devDependencies": {
+    "@elgato/cli": "latest",
+    "@rollup/plugin-commonjs": "latest",
+    "@rollup/plugin-node-resolve": "latest",
+    "@rollup/plugin-typescript": "latest",
+    "rollup": "latest",
+    "tslib": "latest",
+    "typescript": "5.9.3"
+  }
+}

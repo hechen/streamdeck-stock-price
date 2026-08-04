@@ -1,0 +1,123 @@
+<!doctype html>
+<html>
+<head lang="en">
+  <title>Stock Quote Settings</title>
+  <meta charset="utf-8" />
+  <script src="sdpi-components.js"></script>
+  <style>
+    body { color: #e8e8e8; color-scheme: dark; font-family: system-ui, sans-serif; }
+    .global-box { margin: 8px; padding: 10px; border: 1px solid #555; border-radius: 6px; }
+    .global-box label { display: block; margin: 7px 0 3px; font-size: 12px; }
+    .global-box input { box-sizing: border-box; width: 100%; padding: 6px; color: #f2f2f2; background: #3d3d3d; border: 1px solid #666; border-radius: 3px; }
+    .global-box button { margin-top: 9px; width: 100%; padding: 7px; }
+    .hint { margin: 6px 8px 10px; color: #aaa; font-size: 11px; line-height: 1.35; }
+    #saved { margin-left: 7px; color: #65d39a; font-size: 11px; }
+  </style>
+</head>
+<body>
+  <div class="global-box">
+    <strong>Shared plugin settings</strong>
+    <label for="apiKey">Alpha Vantage API key</label>
+    <input id="apiKey" type="password" autocomplete="off" placeholder="Used by every Stock Price key" />
+    <label for="dailyLimit">Maximum requests per rolling 24 hours</label>
+    <input id="dailyLimit" type="number" min="1" max="25" value="24" />
+    <label for="finnhubApiKey">Finnhub API key</label>
+    <input id="finnhubApiKey" type="password" autocomplete="off" placeholder="Used by Finnhub Stock Price keys" />
+    <label for="finnhubMinuteLimit">Maximum Finnhub requests per minute</label>
+    <input id="finnhubMinuteLimit" type="number" min="1" max="60" value="50" />
+    <button id="saveGlobal" type="button">Save shared settings</button><span id="saved"></span>
+  </div>
+  <p class="hint">Alpha Vantage defaults to 24 requests per rolling day. Finnhub defaults to 50 requests per rolling minute, below its published free limit of 60. Both ledgers are shared and persist across Stream Deck restarts.</p>
+
+  <sdpi-item label="Data provider">
+    <sdpi-select setting="provider" default="alphaVantage">
+      <option value="alphaVantage">Alpha Vantage</option>
+      <option value="finnhub">Finnhub</option>
+    </sdpi-select>
+  </sdpi-item>
+  <sdpi-item label="Ticker">
+    <sdpi-textfield setting="symbol" placeholder="AAPL" required></sdpi-textfield>
+  </sdpi-item>
+  <sdpi-item label="Auto refresh">
+    <sdpi-select setting="refreshSeconds" default="14400">
+      <option value="0">Only when pressed</option>
+      <option value="14400">Every 4 hours</option>
+      <option value="3600">Every hour</option>
+      <option value="900">Every 15 minutes</option>
+      <option value="300">Every 5 minutes</option>
+      <option value="60">Every minute</option>
+    </sdpi-select>
+  </sdpi-item>
+  <p class="hint">Finnhub keys stream visible prices over one shared WebSocket. This interval refreshes the REST reference quote used for previous-close calculations and is clamped to at least one hour for Finnhub.</p>
+  <sdpi-item label="Daily change">
+    <sdpi-checkbox setting="showDaily" default="true"></sdpi-checkbox>
+  </sdpi-item>
+  <sdpi-item label="Weekly change">
+    <sdpi-checkbox setting="showWeekly" default="true"></sdpi-checkbox>
+  </sdpi-item>
+  <sdpi-item label="Background follows">
+    <sdpi-select setting="colorMetric" default="daily">
+      <option value="daily">Daily change</option>
+      <option value="weekly">Weekly change</option>
+    </sdpi-select>
+  </sdpi-item>
+  <sdpi-item label="Background style">
+    <sdpi-select setting="backgroundStyle" default="pure">
+      <option value="pure">Market color</option>
+      <option value="icon">Stock icon</option>
+      <option value="custom">Custom color</option>
+    </sdpi-select>
+  </sdpi-item>
+  <sdpi-item label="Up color">
+    <sdpi-color setting="upBackgroundColor" default="#086B4F"></sdpi-color>
+  </sdpi-item>
+  <sdpi-item label="Down color">
+    <sdpi-color setting="downBackgroundColor" default="#991B3A"></sdpi-color>
+  </sdpi-item>
+  <sdpi-item label="Neutral/error color">
+    <sdpi-color setting="neutralBackgroundColor" default="#374151"></sdpi-color>
+  </sdpi-item>
+  <sdpi-item label="Custom color">
+    <sdpi-color setting="customBackgroundColor" default="#374151"></sdpi-color>
+  </sdpi-item>
+  <sdpi-item>
+    <sdpi-button onclick="window.open('https://www.alphavantage.co/support/#api-key')">Alpha Vantage</sdpi-button>
+  </sdpi-item>
+  <sdpi-item>
+    <sdpi-button onclick="window.open('https://finnhub.io/register')">Get Finnhub key</sdpi-button>
+  </sdpi-item>
+
+  <script>
+    window.addEventListener("DOMContentLoaded", async () => {
+      const client = SDPIComponents.streamDeckClient;
+      const apiKey = document.getElementById("apiKey");
+      const dailyLimit = document.getElementById("dailyLimit");
+      const finnhubApiKey = document.getElementById("finnhubApiKey");
+      const finnhubMinuteLimit = document.getElementById("finnhubMinuteLimit");
+      const saved = document.getElementById("saved");
+      let globalSettings = await client.getGlobalSettings();
+      apiKey.value = globalSettings.apiKey || "";
+      dailyLimit.value = String(globalSettings.dailyRequestLimit || 24);
+      finnhubApiKey.value = globalSettings.finnhubApiKey || "";
+      finnhubMinuteLimit.value = String(globalSettings.finnhubMinuteLimit || 50);
+
+      document.getElementById("saveGlobal").addEventListener("click", async () => {
+        globalSettings = await client.getGlobalSettings();
+        const limit = Math.min(25, Math.max(1, Number(dailyLimit.value) || 24));
+        const finnhubLimit = Math.min(60, Math.max(1, Number(finnhubMinuteLimit.value) || 50));
+        await client.setGlobalSettings({
+          ...globalSettings,
+          apiKey: apiKey.value.trim(),
+          dailyRequestLimit: limit,
+          finnhubApiKey: finnhubApiKey.value.trim(),
+          finnhubMinuteLimit: finnhubLimit,
+        });
+        dailyLimit.value = String(limit);
+        finnhubMinuteLimit.value = String(finnhubLimit);
+        saved.textContent = "Saved";
+        setTimeout(() => { saved.textContent = ""; }, 1500);
+      });
+    });
+  </script>
+</body>
+</html>
