@@ -19,6 +19,7 @@ Each key can choose its own ticker, provider, refresh behavior, displayed metric
 - Persistent provider-specific request budgets
 - Cached quotes when a provider is unavailable
 - Consistent plugin-rendered typography across existing and new keys
+- Compact, Standard, and Large text presets with automatic fitting
 - Offline property-inspector UI
 
 ## Requirements
@@ -70,6 +71,7 @@ Finnhub's historical stock-candle endpoint is premium-only. To keep free keys fu
 - **Auto refresh:** reference-quote refresh interval or manual-only mode
 - **Daily change:** show or hide the daily row
 - **Weekly change:** show or hide the weekly row
+- **Text size:** Compact, Standard, or Large hierarchy with automatic fitting
 - **Background follows:** use daily or weekly direction for market colors
 - **Background style:** market color, stock watermark, or fixed custom color
 - **Up / Down / Neutral color:** independent market-mode colors

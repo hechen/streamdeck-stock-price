@@ -21,6 +21,7 @@ type StockSettings = {
   upBackgroundColor?: string;
   downBackgroundColor?: string;
   neutralBackgroundColor?: string;
+  textSize?: "compact" | "standard" | "large";
   apiKey?: string;
 };
 
@@ -203,12 +204,26 @@ export class StockPriceAction extends SingletonAction<StockSettings> {
     settings: StockSettings,
   ): Promise<void> {
     const { fill, decoration } = this.backgroundAppearance(settings, change);
-    const lineHeight = lines.length >= 4 ? 25 : 29;
-    const startY = 72 - ((lines.length - 1) * lineHeight) / 2;
+    const preset = settings.textSize ?? "standard";
+    const typography = {
+      compact: { symbol: 18, price: 20, daily: 14, weekly: 13, gap: 7 },
+      standard: { symbol: 20, price: 24, daily: 16, weekly: 14, gap: 7 },
+      large: { symbol: 22, price: 27, daily: 17, weekly: 15, gap: 6 },
+    }[preset];
+    const desiredSizes = lines.map((_, index) => {
+      if (index === 0) return typography.symbol;
+      if (index === 1) return typography.price;
+      if (index === 2) return typography.daily;
+      return typography.weekly;
+    });
+    const sizes = lines.map((line, index) => this.fittedFontSize(line, desiredSizes[index]));
+    const totalHeight = sizes.reduce((sum, size) => sum + size, 0) + typography.gap * (lines.length - 1);
+    let cursorY = 72 - totalHeight / 2;
     const text = lines.map((line, index) => {
-      const size = index < 2 ? 21 : 17;
-      const weight = index === 0 ? 700 : 600;
-      const y = startY + index * lineHeight;
+      const size = sizes[index];
+      const weight = index === 1 ? 750 : index === 0 ? 700 : 600;
+      const y = cursorY + size / 2;
+      cursorY += size + typography.gap;
       return `<text x="72" y="${y}" text-anchor="middle" dominant-baseline="middle" fill="#FFFFFF" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="${size}" font-weight="${weight}">${this.escapeXml(line)}</text>`;
     }).join("");
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144"><rect width="144" height="144" fill="${fill}"/>${decoration}${text}</svg>`;
@@ -216,6 +231,16 @@ export class StockPriceAction extends SingletonAction<StockSettings> {
     const image = `data:image/svg+xml;base64,${btoa(String.fromCharCode(...bytes))}`;
     await actionInstance.setTitle("");
     await actionInstance.setImage(image);
+  }
+
+  private fittedFontSize(text: string, desiredSize: number): number {
+    const estimatedWidth = [...text].reduce((width, character) => {
+      if (/[MW%@]/.test(character)) return width + 0.82;
+      if (/[ilI1 .]/.test(character)) return width + 0.34;
+      return width + 0.6;
+    }, 0) * desiredSize;
+    if (estimatedWidth <= 128) return desiredSize;
+    return Math.max(11, Math.floor(desiredSize * (128 / estimatedWidth)));
   }
 
   private backgroundAppearance(settings: StockSettings, change: number): { fill: string; decoration: string } {
