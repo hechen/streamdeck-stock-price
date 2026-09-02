@@ -1,129 +1,373 @@
 <!doctype html>
-<html>
-<head lang="en">
+<html lang="en">
+<head>
   <title>Stock Quote Settings</title>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="sdpi-components.js"></script>
   <style>
-    body { color: #e8e8e8; color-scheme: dark; font-family: system-ui, sans-serif; }
-    .global-box { margin: 8px; padding: 10px; border: 1px solid #555; border-radius: 6px; }
-    .global-box label { display: block; margin: 7px 0 3px; font-size: 12px; }
-    .global-box input { box-sizing: border-box; width: 100%; padding: 6px; color: #f2f2f2; background: #3d3d3d; border: 1px solid #666; border-radius: 3px; }
-    .global-box button { margin-top: 9px; width: 100%; padding: 7px; }
-    .hint { margin: 6px 8px 10px; color: #aaa; font-size: 11px; line-height: 1.35; }
-    #saved { margin-left: 7px; color: #65d39a; font-size: 11px; }
+    :root {
+      color-scheme: dark;
+      --bg: #2d2d2d;
+      --panel: #353535;
+      --panel-strong: #3b3b3b;
+      --border: #505050;
+      --text: #f2f2f2;
+      --muted: #b8b8b8;
+      --accent-strong: #159766;
+      --danger: #ff8f9b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+    .page { width: min(100%, 390px); margin: 0 auto; padding: 14px 12px 22px; }
+    header { padding: 2px 2px 13px; }
+    h1 { margin: 0 0 3px; font-size: 18px; line-height: 1.2; }
+    h2 { margin: 0; font-size: 13px; line-height: 1.25; }
+    p { margin: 0; }
+    .subtitle, .hint { color: var(--muted); }
+    .section-label {
+      margin: 0 0 8px;
+      color: #d7d7d7;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .card, details {
+      margin-bottom: 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--panel);
+      overflow: hidden;
+    }
+    .card-body, details > .details-body { padding: 12px 10px 5px; }
+    .provider-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+    .badge {
+      border-radius: 999px;
+      padding: 2px 7px;
+      background: rgba(85, 214, 158, .15);
+      color: #8aefc2;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .provider-copy { margin-bottom: 11px; color: var(--muted); font-size: 11px; }
+    .provider-panel[hidden] { display: none; }
+    label { display: block; margin: 8px 0 4px; color: #dedede; font-weight: 600; }
+    input {
+      width: 100%;
+      height: 30px;
+      padding: 5px 8px;
+      border: 1px solid #626262;
+      border-radius: 4px;
+      background: #414141;
+      color: var(--text);
+      font: inherit;
+    }
+    input:focus { outline: 2px solid rgba(85, 214, 158, .55); outline-offset: 1px; }
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 10px; }
+    button {
+      min-height: 32px;
+      border: 1px solid #696969;
+      border-radius: 4px;
+      background: #484848;
+      color: var(--text);
+      font: inherit;
+      font-weight: 650;
+      cursor: pointer;
+    }
+    button:hover { background: #525252; }
+    button:disabled { cursor: wait; opacity: .6; }
+    button.primary { border-color: var(--accent-strong); background: var(--accent-strong); color: white; }
+    button.primary:hover { background: #1aa873; }
+    .status {
+      min-height: 18px;
+      margin-top: 9px;
+      padding: 6px 8px;
+      border-radius: 4px;
+      background: var(--panel-strong);
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .status.ok { background: rgba(21, 151, 102, .18); color: #8aefc2; }
+    .status.error { background: rgba(190, 46, 64, .18); color: var(--danger); }
+    .usage { margin-top: 6px; color: var(--muted); font-size: 10px; }
+    .privacy { margin: 9px 1px 5px; color: #a9a9a9; font-size: 10px; }
+    .quota { margin: 9px 0 0; border: 0; border-top: 1px solid #4e4e4e; border-radius: 0; background: transparent; }
+    .quota summary { padding: 8px 0 3px; color: #cfcfcf; }
+    summary { padding: 10px 11px; font-weight: 700; cursor: pointer; user-select: none; }
+    details[open] > summary { border-bottom: 1px solid var(--border); background: #393939; }
+    .quota[open] > summary { border-bottom: 0; background: transparent; }
+    sdpi-item { margin-bottom: 8px; }
+    .inline-hint { margin: -2px 4px 10px; color: var(--muted); font-size: 10px; }
+    footer { padding: 4px 2px 0; color: #8f8f8f; font-size: 10px; text-align: center; }
   </style>
 </head>
 <body>
-  <div class="global-box">
-    <strong>Shared plugin settings</strong>
-    <label for="apiKey">Alpha Vantage API key</label>
-    <input id="apiKey" type="password" autocomplete="off" placeholder="Used by every Stock Price key" />
-    <label for="dailyLimit">Maximum requests per rolling 24 hours</label>
-    <input id="dailyLimit" type="number" min="1" max="25" value="24" />
-    <label for="finnhubApiKey">Finnhub API key</label>
-    <input id="finnhubApiKey" type="password" autocomplete="off" placeholder="Used by Finnhub Stock Price keys" />
-    <label for="finnhubMinuteLimit">Maximum Finnhub requests per minute</label>
-    <input id="finnhubMinuteLimit" type="number" min="1" max="60" value="50" />
-    <button id="saveGlobal" type="button">Save shared settings</button><span id="saved"></span>
-  </div>
-  <p class="hint">Alpha Vantage defaults to 24 requests per rolling day. Finnhub defaults to 50 requests per rolling minute, below its published free limit of 60. Both ledgers are shared and persist across Stream Deck restarts.</p>
+  <main class="page">
+    <header>
+      <h1>Stock Quote</h1>
+      <p class="subtitle">Choose a ticker, connect a data provider, and press the key to refresh.</p>
+    </header>
 
-  <sdpi-item label="Data provider">
-    <sdpi-select setting="provider" default="alphaVantage">
-      <option value="alphaVantage">Alpha Vantage</option>
-      <option value="finnhub">Finnhub</option>
-    </sdpi-select>
-  </sdpi-item>
-  <sdpi-item label="Ticker">
-    <sdpi-textfield setting="symbol" placeholder="AAPL" required></sdpi-textfield>
-  </sdpi-item>
-  <sdpi-item label="Auto refresh">
-    <sdpi-select setting="refreshSeconds" default="14400">
-      <option value="0">Only when pressed</option>
-      <option value="14400">Every 4 hours</option>
-      <option value="3600">Every hour</option>
-      <option value="900">Every 15 minutes</option>
-      <option value="300">Every 5 minutes</option>
-      <option value="60">Every minute</option>
-    </sdpi-select>
-  </sdpi-item>
-  <p class="hint">Finnhub keys stream visible prices over one shared WebSocket. This interval refreshes the REST reference quote used for previous-close calculations and is clamped to at least one hour for Finnhub.</p>
-  <sdpi-item label="Daily change">
-    <sdpi-checkbox setting="showDaily" default="true"></sdpi-checkbox>
-  </sdpi-item>
-  <sdpi-item label="Weekly change">
-    <sdpi-checkbox setting="showWeekly" default="true"></sdpi-checkbox>
-  </sdpi-item>
-  <sdpi-item label="Text size">
-    <sdpi-select setting="textSize" default="standard">
-      <option value="compact">Compact</option>
-      <option value="standard">Standard</option>
-      <option value="large">Large</option>
-    </sdpi-select>
-  </sdpi-item>
-  <p class="hint">Price is emphasized automatically. Long symbols and values shrink to fit without clipping.</p>
-  <sdpi-item label="Background follows">
-    <sdpi-select setting="colorMetric" default="daily">
-      <option value="daily">Daily change</option>
-      <option value="weekly">Weekly change</option>
-    </sdpi-select>
-  </sdpi-item>
-  <sdpi-item label="Background style">
-    <sdpi-select setting="backgroundStyle" default="pure">
-      <option value="pure">Market color</option>
-      <option value="icon">Stock icon</option>
-      <option value="custom">Custom color</option>
-    </sdpi-select>
-  </sdpi-item>
-  <sdpi-item label="Up color">
-    <sdpi-color setting="upBackgroundColor" default="#086B4F"></sdpi-color>
-  </sdpi-item>
-  <sdpi-item label="Down color">
-    <sdpi-color setting="downBackgroundColor" default="#991B3A"></sdpi-color>
-  </sdpi-item>
-  <sdpi-item label="Neutral/error color">
-    <sdpi-color setting="neutralBackgroundColor" default="#374151"></sdpi-color>
-  </sdpi-item>
-  <sdpi-item label="Custom color">
-    <sdpi-color setting="customBackgroundColor" default="#374151"></sdpi-color>
-  </sdpi-item>
-  <sdpi-item>
-    <sdpi-button onclick="window.open('https://www.alphavantage.co/support/#api-key')">Alpha Vantage</sdpi-button>
-  </sdpi-item>
-  <sdpi-item>
-    <sdpi-button onclick="window.open('https://finnhub.io/register')">Get Finnhub key</sdpi-button>
-  </sdpi-item>
+    <section class="card">
+      <div class="card-body">
+        <p class="section-label">Quote</p>
+        <sdpi-item label="Provider">
+          <sdpi-select id="provider" setting="provider" default="alphaVantage">
+            <option value="alphaVantage">Alpha Vantage</option>
+            <option value="finnhub">Finnhub · Recommended</option>
+          </sdpi-select>
+        </sdpi-item>
+        <sdpi-item label="Ticker">
+          <sdpi-textfield setting="symbol" placeholder="AAPL" required></sdpi-textfield>
+        </sdpi-item>
+        <sdpi-item label="Auto refresh">
+          <sdpi-select setting="refreshSeconds" default="14400">
+            <option value="0">Only when pressed</option>
+            <option value="14400">Every 4 hours</option>
+            <option value="3600">Every hour</option>
+            <option value="900">Every 15 minutes</option>
+            <option value="300">Every 5 minutes</option>
+            <option value="60">Every minute</option>
+          </sdpi-select>
+        </sdpi-item>
+        <p id="refreshHint" class="inline-hint"></p>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-body">
+        <div class="provider-heading">
+          <h2 id="providerTitle">Alpha Vantage setup</h2>
+          <span id="recommendedBadge" class="badge" hidden>Recommended</span>
+        </div>
+        <p id="providerCopy" class="provider-copy"></p>
+
+        <div id="alphaPanel" class="provider-panel">
+          <label for="apiKey">API key</label>
+          <input id="apiKey" type="password" autocomplete="off" placeholder="Paste your Alpha Vantage key" />
+          <details class="quota">
+            <summary>Request safety</summary>
+            <label for="dailyLimit">Maximum requests per rolling day</label>
+            <input id="dailyLimit" type="number" min="1" max="25" value="24" />
+          </details>
+        </div>
+
+        <div id="finnhubPanel" class="provider-panel" hidden>
+          <label for="finnhubApiKey">API key</label>
+          <input id="finnhubApiKey" type="password" autocomplete="off" placeholder="Paste your Finnhub key" />
+          <details class="quota">
+            <summary>Request safety</summary>
+            <label for="finnhubMinuteLimit">Maximum REST requests per minute</label>
+            <input id="finnhubMinuteLimit" type="number" min="1" max="60" value="50" />
+          </details>
+        </div>
+
+        <div class="actions">
+          <button id="saveVerify" class="primary" type="button">Save &amp; verify</button>
+          <button id="getKey" type="button">Get free key</button>
+        </div>
+        <div id="connectionStatus" class="status" role="status" aria-live="polite">Loading saved settings…</div>
+        <p id="usage" class="usage"></p>
+        <p class="privacy">Your key is saved once, shared by every Stock Quote key, and kept in Stream Deck’s local plugin settings.</p>
+      </div>
+    </section>
+
+    <details open>
+      <summary>Display</summary>
+      <div class="details-body">
+        <sdpi-item label="Daily change">
+          <sdpi-checkbox setting="showDaily" default="true"></sdpi-checkbox>
+        </sdpi-item>
+        <sdpi-item label="Weekly change">
+          <sdpi-checkbox setting="showWeekly" default="true"></sdpi-checkbox>
+        </sdpi-item>
+        <sdpi-item label="Color follows">
+          <sdpi-select setting="colorMetric" default="daily">
+            <option value="daily">Daily change</option>
+            <option value="weekly">Weekly change</option>
+          </sdpi-select>
+        </sdpi-item>
+        <sdpi-item label="Background">
+          <sdpi-select setting="backgroundStyle" default="pure">
+            <option value="pure">Market color</option>
+            <option value="icon">Stock watermark</option>
+            <option value="custom">Fixed custom color</option>
+          </sdpi-select>
+        </sdpi-item>
+        <p class="inline-hint">Text automatically fits longer symbols and prices.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Colors</summary>
+      <div class="details-body">
+        <sdpi-item label="Up">
+          <sdpi-color setting="upBackgroundColor" default="#086B4F"></sdpi-color>
+        </sdpi-item>
+        <sdpi-item label="Down">
+          <sdpi-color setting="downBackgroundColor" default="#991B3A"></sdpi-color>
+        </sdpi-item>
+        <sdpi-item label="Neutral/error">
+          <sdpi-color setting="neutralBackgroundColor" default="#374151"></sdpi-color>
+        </sdpi-item>
+        <sdpi-item label="Fixed custom">
+          <sdpi-color setting="customBackgroundColor" default="#374151"></sdpi-color>
+        </sdpi-item>
+      </div>
+    </details>
+
+    <footer>Stock Price · Settings are shared where noted</footer>
+  </main>
 
   <script>
     window.addEventListener("DOMContentLoaded", async () => {
       const client = SDPIComponents.streamDeckClient;
+      const providerSelect = document.getElementById("provider");
       const apiKey = document.getElementById("apiKey");
       const dailyLimit = document.getElementById("dailyLimit");
       const finnhubApiKey = document.getElementById("finnhubApiKey");
       const finnhubMinuteLimit = document.getElementById("finnhubMinuteLimit");
-      const saved = document.getElementById("saved");
-      let globalSettings = await client.getGlobalSettings();
-      apiKey.value = globalSettings.apiKey || "";
-      dailyLimit.value = String(globalSettings.dailyRequestLimit || 24);
-      finnhubApiKey.value = globalSettings.finnhubApiKey || "";
-      finnhubMinuteLimit.value = String(globalSettings.finnhubMinuteLimit || 50);
+      const saveVerify = document.getElementById("saveVerify");
+      const status = document.getElementById("connectionStatus");
+      const usage = document.getElementById("usage");
+      let globalSettings = {};
+      let selectedProvider = "alphaVantage";
 
-      document.getElementById("saveGlobal").addEventListener("click", async () => {
+      const providerDetails = {
+        alphaVantage: {
+          title: "Alpha Vantage setup",
+          copy: "Simple free setup for occasional or end-of-day quote updates.",
+          refresh: "The free tier is limited to 25 requests per day. The plugin stops at your safety cap.",
+          url: "https://www.alphavantage.co/support/#api-key",
+        },
+        finnhub: {
+          title: "Finnhub setup",
+          copy: "Recommended for frequent use. Visible Finnhub keys share one live price connection.",
+          refresh: "Live prices use one shared stream. REST reference quotes are limited to at least one-hour intervals.",
+          url: "https://finnhub.io/register",
+        },
+      };
+
+      function setStatus(message, kind = "") {
+        status.textContent = message;
+        status.className = `status ${kind}`.trim();
+      }
+
+      function updateUsage(settings = globalSettings) {
+        const now = Date.now();
+        if (selectedProvider === "finnhub") {
+          const used = (settings.finnhubRequestTimestamps || []).filter((value) => value > now - 60_000).length;
+          const limit = Number(settings.finnhubMinuteLimit || 50);
+          usage.textContent = `Shared REST allowance: ${Math.max(0, limit - used)} / ${limit} remaining this minute`;
+        } else {
+          const used = (settings.requestTimestamps || []).filter((value) => value > now - 86_400_000).length;
+          const limit = Number(settings.dailyRequestLimit || 24);
+          usage.textContent = `Shared API allowance: ${Math.max(0, limit - used)} / ${limit} remaining today`;
+        }
+      }
+
+      async function refreshSharedUsage() {
+        try {
+          globalSettings = await client.getGlobalSettings();
+          updateUsage(globalSettings);
+        } catch {
+          // The current value remains useful if Stream Deck is briefly unavailable.
+        }
+      }
+
+      client.didReceiveGlobalSettings.subscribe((event) => {
+        if (!event.payload?.settings) return;
+        globalSettings = event.payload.settings;
+        updateUsage(globalSettings);
+      });
+
+      window.addEventListener("focus", refreshSharedUsage);
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) refreshSharedUsage();
+      });
+      window.setInterval(refreshSharedUsage, 5_000);
+
+      function updateProvider(provider) {
+        selectedProvider = provider === "finnhub" ? "finnhub" : "alphaVantage";
+        const details = providerDetails[selectedProvider];
+        document.getElementById("alphaPanel").hidden = selectedProvider !== "alphaVantage";
+        document.getElementById("finnhubPanel").hidden = selectedProvider !== "finnhub";
+        document.getElementById("recommendedBadge").hidden = selectedProvider !== "finnhub";
+        document.getElementById("providerTitle").textContent = details.title;
+        document.getElementById("providerCopy").textContent = details.copy;
+        document.getElementById("refreshHint").textContent = details.refresh;
+        const hasKey = selectedProvider === "finnhub" ? finnhubApiKey.value.trim() : apiKey.value.trim();
+        setStatus(hasKey ? "Key saved · verify to check the connection" : "No key saved");
+        updateUsage();
+      }
+
+      providerSelect.addEventListener("valuechange", () => updateProvider(providerSelect.value));
+      providerSelect.addEventListener("change", () => updateProvider(providerSelect.value));
+      document.getElementById("getKey").addEventListener("click", () => window.open(providerDetails[selectedProvider].url));
+
+      updateProvider("alphaVantage");
+      try {
+        const actionPayload = await client.getSettings();
+        const actionSettings = actionPayload.settings || actionPayload;
         globalSettings = await client.getGlobalSettings();
-        const limit = Math.min(25, Math.max(1, Number(dailyLimit.value) || 24));
-        const finnhubLimit = Math.min(60, Math.max(1, Number(finnhubMinuteLimit.value) || 50));
-        await client.setGlobalSettings({
-          ...globalSettings,
-          apiKey: apiKey.value.trim(),
-          dailyRequestLimit: limit,
-          finnhubApiKey: finnhubApiKey.value.trim(),
-          finnhubMinuteLimit: finnhubLimit,
-        });
-        dailyLimit.value = String(limit);
-        finnhubMinuteLimit.value = String(finnhubLimit);
-        saved.textContent = "Saved";
-        setTimeout(() => { saved.textContent = ""; }, 1500);
+        apiKey.value = globalSettings.apiKey || "";
+        dailyLimit.value = String(globalSettings.dailyRequestLimit || 24);
+        finnhubApiKey.value = globalSettings.finnhubApiKey || "";
+        finnhubMinuteLimit.value = String(globalSettings.finnhubMinuteLimit || 50);
+        updateProvider(actionSettings.provider || providerSelect.value || "alphaVantage");
+      } catch {
+        setStatus("Open these settings inside Stream Deck to connect a provider");
+      }
+
+      saveVerify.addEventListener("click", async () => {
+        const key = selectedProvider === "finnhub" ? finnhubApiKey.value.trim() : apiKey.value.trim();
+        if (!key) {
+          setStatus("Enter an API key first", "error");
+          return;
+        }
+
+        saveVerify.disabled = true;
+        saveVerify.textContent = "Checking…";
+        setStatus("Saving and checking the connection…");
+        try {
+          globalSettings = await client.getGlobalSettings();
+          const limit = Math.min(25, Math.max(1, Number(dailyLimit.value) || 24));
+          const finnhubLimit = Math.min(60, Math.max(1, Number(finnhubMinuteLimit.value) || 50));
+          await client.setGlobalSettings({
+            ...globalSettings,
+            apiKey: apiKey.value.trim(),
+            dailyRequestLimit: limit,
+            finnhubApiKey: finnhubApiKey.value.trim(),
+            finnhubMinuteLimit: finnhubLimit,
+          });
+          dailyLimit.value = String(limit);
+          finnhubMinuteLimit.value = String(finnhubLimit);
+
+          const response = await Promise.race([
+            client.get(
+              "sendToPlugin",
+              "sendToPropertyInspector",
+              (message) => message.payload?.event === "providerVerification" && message.payload?.provider === selectedProvider,
+              { event: "verifyProvider", provider: selectedProvider },
+            ),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Verification timed out")), 20_000)),
+          ]);
+          setStatus(response.payload.message, response.payload.ok ? "ok" : "error");
+          await refreshSharedUsage();
+        } catch {
+          setStatus("Could not verify the key. Check your connection and try again.", "error");
+        } finally {
+          saveVerify.disabled = false;
+          saveVerify.textContent = "Save & verify";
+        }
       });
     });
   </script>

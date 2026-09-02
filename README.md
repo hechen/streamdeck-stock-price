@@ -17,9 +17,10 @@ Each key can choose its own ticker, provider, refresh behavior, displayed metric
 - Custom up, down, and neutral colors per key
 - Fixed custom-color and stock-watermark background modes
 - Persistent provider-specific request budgets
+- Built-in API-key verification and visible remaining-request counts
 - Cached quotes when a provider is unavailable
 - Consistent plugin-rendered typography across existing and new keys
-- Compact, Standard, and Large text presets with automatic fitting
+- Large, readable text with automatic fitting for longer values
 - Offline property-inspector UI
 
 ## Requirements
@@ -35,8 +36,8 @@ Each key can choose its own ticker, provider, refresh behavior, displayed metric
 1. Download the latest `.streamDeckPlugin` package from this project's GitHub releases, or build it from source.
 2. Double-click the package and approve the installation in Stream Deck.
 3. Drag **Stock Quote** from the **Stock Price** category onto a key.
-4. Select the key and save an API key under **Shared plugin settings**.
-5. Choose the key's provider and ticker.
+4. Select the key and choose a provider and ticker.
+5. Paste that provider's API key once, then select **Save & verify**.
 
 Provider keys are shared by every action from this plugin. You do not need to paste the same key into every Stream Deck key.
 
@@ -71,7 +72,7 @@ Finnhub's historical stock-candle endpoint is premium-only. To keep free keys fu
 - **Auto refresh:** reference-quote refresh interval or manual-only mode
 - **Daily change:** show or hide the daily row
 - **Weekly change:** show or hide the weekly row
-- **Text size:** Compact, Standard, or Large hierarchy with automatic fitting
+- **Text:** Large, readable hierarchy with automatic fitting for longer values
 - **Background follows:** use daily or weekly direction for market colors
 - **Background style:** market color, stock watermark, or fixed custom color
 - **Up / Down / Neutral color:** independent market-mode colors
@@ -87,6 +88,7 @@ Finnhub's historical stock-candle endpoint is premium-only. To keep free keys fu
 | `W ERR` | Weekly data failed for another API or network reason |
 | `W WAIT` | Finnhub needs about seven days of local history |
 | `Check symbol` | The provider did not recognize or return the ticker |
+| `Check API key` | The selected provider rejected the saved key |
 | `Set API key` | The selected provider's shared key is missing |
 | `Unavailable` | A network or unclassified provider failure occurred |
 

@@ -5,5 +5,5 @@ streamDeck.logger.setLevel("info");
 streamDeck.settings.useExperimentalMessageIdentifiers = true;
 const stockPriceAction = new StockPriceAction();
 streamDeck.actions.registerAction(stockPriceAction);
-streamDeck.settings.onDidReceiveGlobalSettings(() => void stockPriceAction.refreshVisible());
+streamDeck.settings.onDidReceiveGlobalSettings(() => stockPriceAction.globalSettingsChanged());
 streamDeck.connect();

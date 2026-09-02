@@ -1,7 +1,8 @@
-import {
+import streamDeck, {
   action,
   DidReceiveSettingsEvent,
   KeyDownEvent,
+  SendToPluginEvent,
   SingletonAction,
   WillAppearEvent,
   WillDisappearEvent,
@@ -21,9 +22,12 @@ type StockSettings = {
   upBackgroundColor?: string;
   downBackgroundColor?: string;
   neutralBackgroundColor?: string;
-  textSize?: "compact" | "standard" | "large";
   apiKey?: string;
 };
+
+type StockAction = WillAppearEvent<StockSettings>["action"];
+type RenderSnapshot = { action: StockAction; lines: string[]; change: number; settings: StockSettings };
+type PropertyInspectorMessage = { event?: string; provider?: DataProvider };
 
 const DEFAULT_REFRESH_SECONDS = 14_400;
 const MIN_REFRESH_SECONDS = 60;
@@ -36,11 +40,15 @@ export class StockPriceAction extends SingletonAction<StockSettings> {
   private readonly finnhubStream = new FinnhubStream((symbol, price) => this.queueFinnhubPrice(symbol, price));
   private readonly streamPrices = new Map<string, number>();
   private readonly streamRenderTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private readonly acknowledgementTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private readonly activeAcknowledgements = new Set<string>();
+  private readonly lastRenders = new Map<string, RenderSnapshot>();
 
   override async onWillAppear(ev: WillAppearEvent<StockSettings>): Promise<void> {
     this.visible.set(ev.action.id, { action: ev.action, settings: ev.payload.settings });
     this.syncFinnhubStream();
     await this.refresh(ev.action, ev.payload.settings);
+    await this.removeLegacyActionKey(ev.action, ev.payload.settings);
     this.schedule(ev.action, ev.payload.settings);
   }
 
@@ -48,17 +56,50 @@ export class StockPriceAction extends SingletonAction<StockSettings> {
     this.visible.delete(ev.action.id);
     this.syncFinnhubStream();
     this.clearTimer(ev.action.id);
+    this.clearAcknowledgement(ev.action.id);
+    this.lastRenders.delete(ev.action.id);
   }
 
   override async onDidReceiveSettings(ev: DidReceiveSettingsEvent<StockSettings>): Promise<void> {
     this.visible.set(ev.action.id, { action: ev.action, settings: ev.payload.settings });
     this.syncFinnhubStream();
     await this.refresh(ev.action, ev.payload.settings);
+    await this.removeLegacyActionKey(ev.action, ev.payload.settings);
     this.schedule(ev.action, ev.payload.settings);
   }
 
   override async onKeyDown(ev: KeyDownEvent<StockSettings>): Promise<void> {
     await this.refresh(ev.action, ev.payload.settings, true);
+  }
+
+  override async onSendToPlugin(ev: SendToPluginEvent<PropertyInspectorMessage, StockSettings>): Promise<void> {
+    if (ev.payload.event !== "verifyProvider") return;
+    const provider = ev.payload.provider === "finnhub" ? "finnhub" : "alphaVantage";
+    const settings = await ev.action.getSettings<StockSettings>();
+    const symbol = settings.symbol?.trim().toUpperCase() || "AAPL";
+
+    try {
+      const quote = await this.marketData.getQuote(provider, symbol, undefined, true);
+      this.syncFinnhubStream();
+      await this.refresh(ev.action, settings);
+      await streamDeck.ui.sendToPropertyInspector({
+        event: "providerVerification",
+        provider,
+        ok: true,
+        message: `Connected · ${symbol} ${this.formatPrice(quote.price)}`,
+      });
+    } catch (error) {
+      await streamDeck.ui.sendToPropertyInspector({
+        event: "providerVerification",
+        provider,
+        ok: false,
+        message: this.verificationError(error),
+      });
+    }
+  }
+
+  globalSettingsChanged(): void {
+    this.syncFinnhubStream();
   }
 
   async refreshVisible(): Promise<void> {
@@ -157,8 +198,10 @@ export class StockPriceAction extends SingletonAction<StockSettings> {
       const colorValue = settings.colorMetric === "weekly" && weeklyPercent !== undefined
         ? weeklyPercent
         : quote.dailyPercent;
+      if (pressed) this.beginAcknowledgement(actionInstance.id);
       await this.render(actionInstance, lines, colorValue, settings);
     } catch (error) {
+      if (pressed) this.clearAcknowledgement(actionInstance.id);
       const cached = await this.marketData.cachedQuote(provider, symbol);
       if (cached) {
         await this.render(actionInstance, [symbol, this.formatPrice(cached.price), "Cached"], cached.dailyPercent, settings);
@@ -188,6 +231,7 @@ export class StockPriceAction extends SingletonAction<StockSettings> {
   private errorLabel(error: unknown): string {
     if (error instanceof MissingApiKeyError) return "Set API key";
     if (this.isLimitError(error)) return "API limit";
+    if (error instanceof ProviderError && /invalid api key|token|HTTP 401|HTTP 403/i.test(error.message)) return "Check API key";
     if (error instanceof ProviderError && /invalid api call|symbol|no .* quote/i.test(error.message)) return "Check symbol";
     return "Unavailable";
   }
@@ -197,19 +241,31 @@ export class StockPriceAction extends SingletonAction<StockSettings> {
       || (error instanceof Error && /limit|frequency|requests per day|call volume|premium/i.test(error.message));
   }
 
+  private verificationError(error: unknown): string {
+    if (error instanceof MissingApiKeyError) return "Enter an API key first";
+    if (this.isLimitError(error)) return "Request limit reached — try again later";
+    if (error instanceof ProviderError && /invalid|token|api key|forbidden|unauthorized|HTTP 401|HTTP 403/i.test(error.message)) {
+      return "The API key was not accepted";
+    }
+    if (error instanceof ProviderError && /symbol|no .* quote/i.test(error.message)) return "Check the ticker symbol";
+    return "Could not connect to the provider";
+  }
+
+  private async removeLegacyActionKey(actionInstance: StockAction, settings: StockSettings): Promise<void> {
+    if (!settings.apiKey?.trim()) return;
+    const { apiKey: _legacyApiKey, ...safeSettings } = settings;
+    await actionInstance.setSettings(safeSettings);
+  }
+
   private async render(
-    actionInstance: WillAppearEvent<StockSettings>["action"],
+    actionInstance: StockAction,
     lines: string[],
     change: number,
     settings: StockSettings,
   ): Promise<void> {
+    this.lastRenders.set(actionInstance.id, { action: actionInstance, lines, change, settings });
     const { fill, decoration } = this.backgroundAppearance(settings, change);
-    const preset = settings.textSize ?? "standard";
-    const typography = {
-      compact: { symbol: 18, price: 20, daily: 14, weekly: 13, gap: 7 },
-      standard: { symbol: 20, price: 24, daily: 16, weekly: 14, gap: 7 },
-      large: { symbol: 22, price: 27, daily: 17, weekly: 15, gap: 6 },
-    }[preset];
+    const typography = { symbol: 22, price: 27, daily: 17, weekly: 15, gap: 6 };
     const desiredSizes = lines.map((_, index) => {
       if (index === 0) return typography.symbol;
       if (index === 1) return typography.price;
@@ -226,11 +282,36 @@ export class StockPriceAction extends SingletonAction<StockSettings> {
       cursorY += size + typography.gap;
       return `<text x="72" y="${y}" text-anchor="middle" dominant-baseline="middle" fill="#FFFFFF" font-family="-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif" font-size="${size}" font-weight="${weight}">${this.escapeXml(line)}</text>`;
     }).join("");
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144"><rect width="144" height="144" fill="${fill}"/>${decoration}${text}</svg>`;
+    const acknowledgement = this.activeAcknowledgements.has(actionInstance.id)
+      ? `<g><circle cx="72" cy="72" r="31" fill="#16A34A" stroke="#FFFFFF" stroke-width="4"/><path d="M56 72 L67 83 L89 59" fill="none" stroke="#FFFFFF" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/></g>`
+      : "";
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="144" height="144" viewBox="0 0 144 144"><rect width="144" height="144" fill="${fill}"/>${decoration}${text}${acknowledgement}</svg>`;
     const bytes = new TextEncoder().encode(svg);
     const image = `data:image/svg+xml;base64,${btoa(String.fromCharCode(...bytes))}`;
     await actionInstance.setTitle("");
     await actionInstance.setImage(image);
+  }
+
+  private beginAcknowledgement(id: string): void {
+    this.clearAcknowledgement(id);
+    this.activeAcknowledgements.add(id);
+    const timer = setTimeout(() => {
+      this.acknowledgementTimers.delete(id);
+      this.activeAcknowledgements.delete(id);
+      const snapshot = this.lastRenders.get(id);
+      if (snapshot) {
+        void this.render(snapshot.action, snapshot.lines, snapshot.change, snapshot.settings)
+          .catch((error) => console.error(`Could not clear refresh acknowledgement: ${error instanceof Error ? error.message : "Unknown error"}`));
+      }
+    }, 1_200);
+    this.acknowledgementTimers.set(id, timer);
+  }
+
+  private clearAcknowledgement(id: string): void {
+    const timer = this.acknowledgementTimers.get(id);
+    if (timer) clearTimeout(timer);
+    this.acknowledgementTimers.delete(id);
+    this.activeAcknowledgements.delete(id);
   }
 
   private fittedFontSize(text: string, desiredSize: number): number {
