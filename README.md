@@ -6,6 +6,32 @@ Each key can choose its own ticker, provider, refresh behavior, displayed metric
 
 > This is an independent community project. It is not affiliated with Elgato, Alpha Vantage, or Finnhub. Market data may be delayed and should not be used as the sole basis for trading decisions.
 
+## Preview
+
+### Live quotes at a glance
+
+See current prices, daily movement, and weekly movement directly on your Stream Deck. Market colors make gainers and decliners easy to scan.
+
+<p align="center">
+  <img src="docs/images/stock-price-grid.png" alt="Stock Price plugin showing live stock quotes across a Stream Deck grid" width="900">
+</p>
+
+### Quick per-key setup
+
+Choose a provider and ticker for each key. Finnhub is recommended for live visible-price updates.
+
+<p align="center">
+  <img src="docs/images/stock-price-setup.png" alt="Stock Quote settings showing the Finnhub provider and AAPL ticker" width="900">
+</p>
+
+### Save an API key once
+
+Each provider key is stored in Stream Deck's local plugin settings and shared by every Stock Quote key. The inspector also shows the remaining REST request budget.
+
+<p align="center">
+  <img src="docs/images/stock-price-shared-key.png" alt="Stock Quote shared API key status and remaining request budget" width="900">
+</p>
+
 ## Features
 
 - Alpha Vantage and Finnhub provider selection per key
