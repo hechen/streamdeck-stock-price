@@ -1,6 +1,6 @@
 # Stock Price for Stream Deck version plan
 
-Shared policy revision: **2026-10-21.2**. Rules: [RELEASE_POLICY.md](RELEASE_POLICY.md). Entry point: [AGENTS.md](AGENTS.md).
+Shared policy revision: **2026-10-21.3**. Rules: [RELEASE_POLICY.md](RELEASE_POLICY.md). Entry point: [AGENTS.md](AGENTS.md).
 
 ## Adoption and responsibility
 
