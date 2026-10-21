@@ -1,6 +1,6 @@
 # Shared version and release policy
 
-Policy revision: **2026-10-21.2**. App-specific state, owners, exceptions and adoption status: [VERSION_PLAN.md](VERSION_PLAN.md). Mandatory entry point: [AGENTS.md](AGENTS.md).
+Policy revision: **2026-10-21.3**. App-specific state, owners, exceptions and adoption status: [VERSION_PLAN.md](VERSION_PLAN.md). Mandatory entry point: [AGENTS.md](AGENTS.md).
 
 ## Authority and adoption
 
@@ -26,6 +26,10 @@ Adoption is branch-specific: an open PR is pending; only a verified merged PR es
 For every applicable fix, enumerate **all existing subsequent version branches**, including legacy release branches awaiting migration. Forward-port through a separate reviewed PR per target, resolve conflicts and retest affected behavior on that target. The ledger records source PR/commit, target, owner, method, validation, PR and status: `merged`, `pending`, `conflict`, or `not applicable` with a reason. A shared fix is not complete until every target is accounted for.
 
 Prefer ancestry-preserving merges where compatible. If a full merge would import incorrect version/build metadata or unrelated work, use a documented targeted cherry-pick or adaptation, retaining the original commit identity, rationale and target-specific validation. Do not infer equivalence solely from ancestry or assume a cherry-pick needs no tests. This documentation rollout records follow-up only; it does not forward-port application code.
+
+## TestFlight notes language
+
+Write TestFlight release notes and “What to Test” notes in English only for every app. Do not generate localized TestFlight notes. This standard does not change app UI localization, public App Store release-note localization or other store metadata requirements, and does not authorize deleting existing App Store Connect localizations. It grants no build, upload, submission or distribution authority.
 
 ## Immutable release identity and platform evidence
 
